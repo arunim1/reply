@@ -9,5 +9,5 @@ One option is to input {malicious prompt + suffix1} {suffix2} {suffix3} and obse
 The other option is to input {CONST (e.g. Hello)} {longer suffix1} {malicious prompt}  or {CONST (e.g. Hello) suffix1} {suffix2} {malicious prompt} or {CONST (e.g. Hello)} {suffix1} {malicious prompt + suffix2} and observe how this changes things, if at all. 
 
 TODO: 
-- [ ] Proof-of-concept using PAIR. goal: get the attack to work on the assistant portion of the chat and measure the change in success rate. 
+- [ ] Proof-of-concept using PAIR. goal: get the attack to work on the assistant portion of the chat and measure the change in success rate.  
 - [ ] GCG implementation for each fo the options above, measure the change in success rate. 

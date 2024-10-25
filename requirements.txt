@@ -9,6 +9,7 @@ evaluate
 anthropic
 openai
 python-dotenv
+attr-dot-dict
 
 transformers
 google-generativeai
