@@ -1,0 +1,14 @@
+torch
+fschat
+pandas
+seaborn
+matplotlib
+numpy
+datasets
+evaluate
+anthropic
+openai
+python-dotenv
+
+transformers
+google-generativeai

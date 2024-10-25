@@ -8,9 +8,10 @@ import pandas as pd
 class WandBLogger:
     """WandB logger."""
 
-    def __init__(self, args, system_prompt):
+    def __init__(self, args, system_prompt, project_name = "jailbreak-llms", entity = "arunim_a"):
         self.logger = wandb.init(
-            project = "jailbreak-llms",
+            project = project_name,
+            entity = entity,
             config = {
                 "attack_model" : args.attack_model,
                 "target_model" : args.target_model,
@@ -23,7 +24,6 @@ class WandBLogger:
                 "n_iter": args.n_iterations,
                 "target_str": args.target_str,
                 "n_streams": args.n_streams,
-
             }
         )
         self.is_jailbroken = False
@@ -104,41 +104,3 @@ class WandBLogger:
             print("No jailbreaks achieved.")
             max_score = df['judge_scores'].max()
             print(f"Max Score: {max_score}")
-
-
-    
-
-# class Saver:
-#     """Saves the conversation."""
-
-#     def __init__(self, args, system_prompt):
-#         self.args = args
-#         self.system_prompt = system_prompt
-
-#         now = datetime.now(pytz.timezone('US/Eastern'))
-#         self.filename = os.path.join(
-#             "outputs",
-#             f"{args.behavior}",
-#             f"output_date_{now.month}_{now.day}_time_{now.hour}_{now.minute}.txt"
-#         )
-
-#     def write(self, conv):
-
-#         with open(self.filename, 'w', encoding='utf-8') as f:
-#             f.write(f"""
-#                 Attack model: {self.args.attack_model_path}
-#                 Target model: {self.args.target_model_path}\n
-#                 System prompt: \n\n{self.system_prompt}\n\n"""
-#             )
-
-#             for counter, (role, s) in enumerate(conv.messages):
-#                 if counter % 2 == 1:
-#                     f.write(f"""\n{'='*36}
-#                         Iteration: {(counter + 1) // 2}
-#                         {'='*36}\n
-#                         User:\n {s}\n"""
-#                     )
-#                 else:
-#                     f.write(f"Assistant:\n {s}\n")
-
-

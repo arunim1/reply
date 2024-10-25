@@ -1,11 +1,14 @@
 import argparse
+import asyncio
 from system_prompts import get_attacker_system_prompt
 from loggers import WandBLogger
 from judges import load_judge
 from conversers import load_attack_and_target_models
 from common import process_target_response, get_init_msg, conv_template
 
-def main(args):
+wandb_enabled = True
+
+async def main(args):
 
     # Initialize models and logger 
     system_prompt = get_attacker_system_prompt(
@@ -16,7 +19,8 @@ def main(args):
 
     judgeLM = load_judge(args)
     
-    logger = WandBLogger(args, system_prompt)
+    if wandb_enabled:
+        logger = WandBLogger(args, system_prompt, project_name = "baseline-pair", entity = "arunim_a")
 
     # Initialize conversations
     batchsize = args.n_streams
@@ -35,7 +39,7 @@ def main(args):
             processed_response_list = [process_target_response(target_response, score, args.goal, args.target_str) for target_response, score in zip(target_response_list,judge_scores)]
 
         # Get adversarial prompts and improvement
-        extracted_attack_list = attackLM.get_attack(convs_list, processed_response_list)
+        extracted_attack_list = await attackLM.get_attack(convs_list, processed_response_list)
         print("Finished getting adversarial prompts.")
 
         # Extract prompts and improvements
@@ -43,11 +47,11 @@ def main(args):
         improv_list = [attack["improvement"] for attack in extracted_attack_list]
                 
         # Get target responses
-        target_response_list = targetLM.get_response(adv_prompt_list)
+        target_response_list = await targetLM.get_response(adv_prompt_list)
         print("Finished getting target responses.")
 
         # Get judge scores
-        judge_scores = judgeLM.score(adv_prompt_list,target_response_list)
+        judge_scores = await judgeLM.score(adv_prompt_list,target_response_list)
         print("Finished getting judge scores.")
         
         # Print prompts, responses, and scores
@@ -55,8 +59,9 @@ def main(args):
             print(f"{i+1}/{batchsize}\n\n[IMPROVEMENT]:\n{improv} \n\n[PROMPT]:\n{prompt} \n\n[RESPONSE]:\n{response}\n\n[SCORE]:\n{score}\n\n")
 
         # WandB log values
-        logger.log(iteration, 
-                extracted_attack_list,
+        if wandb_enabled:
+            logger.log(iteration, 
+                    extracted_attack_list,
                 target_response_list,
                 judge_scores)
 
@@ -69,24 +74,27 @@ def main(args):
             print("Found a jailbreak. Exiting.")
             break
 
-    logger.finish()
+    if wandb_enabled:
+        logger.finish()
 
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
 
+    all_models = ["gpt-4o-mini", "gpt-4o", "o1-mini", "o1-preview", "claude-3-haiku-20240307", "claude-3-sonnet-20240229", "claude-3-opus-20240229", "claude-3-5-sonnet-20240620", "claude-3-5-sonnet-20241022"]
+
     ########### Attack model parameters ##########
     parser.add_argument(
         "--attack-model",
-        default = "vicuna",
+        default = "o1-mini",
         help = "Name of attacking model.",
-        choices=["vicuna", "llama-2", "gpt-3.5-turbo", "gpt-4", "claude-instant-1","claude-2", "palm-2"]
+        choices=all_models
     )
     parser.add_argument(
         "--attack-max-n-tokens",
         type = int,
-        default = 500,
+        default = 1000,
         help = "Maximum number of generated tokens for the attacker."
     )
     parser.add_argument(
@@ -100,14 +108,14 @@ if __name__ == '__main__':
     ########### Target model parameters ##########
     parser.add_argument(
         "--target-model",
-        default = "vicuna",
+        default = "gpt-4o-mini",
         help = "Name of target model.",
-        choices=["vicuna", "llama-2", "gpt-3.5-turbo", "gpt-4", "claude-instant-1","claude-2", "palm-2"]
+        choices=all_models
     )
     parser.add_argument(
         "--target-max-n-tokens",
         type = int,
-        default = 150,
+        default = 250,
         help = "Maximum number of generated tokens for the target."
     )
     ##################################################
@@ -115,14 +123,14 @@ if __name__ == '__main__':
     ############ Judge model parameters ##########
     parser.add_argument(
         "--judge-model",
-        default="gpt-3.5-turbo",
+        default="gpt-4o-mini",
         help="Name of judge model.",
-        choices=["gpt-3.5-turbo", "gpt-4","no-judge"]
+        choices=all_models
     )
     parser.add_argument(
         "--judge-max-n-tokens",
         type = int,
-        default = 10,
+        default = 100,
         help = "Maximum number of tokens for the judge."
     )
     parser.add_argument(
@@ -185,4 +193,4 @@ if __name__ == '__main__':
     # TODO: Add a quiet option to suppress print statement
     args = parser.parse_args()
 
-    main(args)
+    asyncio.run(main(args))

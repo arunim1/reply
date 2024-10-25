@@ -1,7 +1,10 @@
 __pycache__
 
+wandb/
 dist/
 results/
 
 *.egg-info
 .DS_Store
+
+.env
