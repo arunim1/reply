@@ -8,10 +8,11 @@ import pandas as pd
 class WandBLogger:
     """WandB logger."""
 
-    def __init__(self, args, project_name = "jailbreak-llms", entity = "arunim_a"):
+    def __init__(self, args, project_name = "jailbreak-llms", entity = "arunim_a", name = None):
         self.logger = wandb.init(
             project = project_name,
             entity = entity,
+            name = name,
             config = {
                 "attack_model" : args.attack_model,
                 "target_model" : args.target_model,
@@ -21,12 +22,17 @@ class WandBLogger:
                 "n_streams": args.n_streams,
             }
         )
+        self.batch_size = args.n_streams
+        self.table = pd.DataFrame()
+        self.reset()
+
+
+    def reset(self):
         self.is_jailbroken = False
         self.query_to_jailbreak = None
-        self.table = pd.DataFrame()
-        self.batch_size = args.n_streams
         self.jailbreak_prompt = None
         self.jailbreak_response = None
+
 
     def log(self, iteration: int, attack_list: list, response_list: list, judge_scores: list, index: int, goal: str, target_str: str, category: str):
         
@@ -57,9 +63,11 @@ class WandBLogger:
 
         self.print_summary_stats(iteration)
 
-    def finish(self, index, goal):
+    def inner_finish(self, index, goal):
         self.print_final_summary_stats(index, goal)
-        self.logger.finish()
+        output = self.query_to_jailbreak
+        self.reset()
+        return output
 
     def print_summary_stats(self, iter):
         bs = self.batch_size

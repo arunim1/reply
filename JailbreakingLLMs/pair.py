@@ -7,7 +7,13 @@ from conversers import load_attack_and_target_models
 from common import process_target_response, get_init_msg, conv_template
 from dotdict import DotDict as dotdict
 
+
 async def pair(args):
+
+    def qprint(text):
+        if args.quiet:
+            return
+        print(text)
 
     # Initialize models and logger 
     system_prompt = get_attacker_system_prompt(
@@ -18,6 +24,7 @@ async def pair(args):
 
     judgeLM = load_judge(args)
     
+    logger = None
     if str(args.logger) == "DotDict()": 
         if args.wandb:
             logger = WandBLogger(args, project_name = "baseline-pair", entity = "arunim_a")
@@ -36,13 +43,13 @@ async def pair(args):
     
     # Begin PAIR
     for iteration in range(1, args.n_iterations + 1):
-        print(f"""\n{'='*36}\nIteration: {iteration}\n{'='*36}\n""")
+        qprint(f"""\n{'='*36}\nIteration: {iteration}\n{'='*36}\n""")
         if iteration > 1:
             processed_response_list = [process_target_response(target_response, score, args.goal, args.target_str) for target_response, score in zip(target_response_list,judge_scores)]
 
         # Get adversarial prompts and improvement
         extracted_attack_list = await attackLM.get_attack(convs_list, processed_response_list)
-        print("Finished getting adversarial prompts.")
+        qprint("Finished getting adversarial prompts.")
 
         # Extract prompts and improvements
         adv_prompt_list = [attack["prompt"] for attack in extracted_attack_list]
@@ -50,15 +57,15 @@ async def pair(args):
                 
         # Get target responses
         target_response_list = await targetLM.get_response(adv_prompt_list)
-        print("Finished getting target responses.")
+        qprint("Finished getting target responses.")
 
         # Get judge scores
         judge_scores = await judgeLM.score(adv_prompt_list,target_response_list)
-        print("Finished getting judge scores.")
+        qprint("Finished getting judge scores.")
         
         # Print prompts, responses, and scores
         for i,(prompt,improv,response, score) in enumerate(zip(adv_prompt_list,improv_list,target_response_list, judge_scores)):
-            print(f"{i+1}/{batchsize}\n\n[IMPROVEMENT]:\n{improv} \n\n[PROMPT]:\n{prompt} \n\n[RESPONSE]:\n{response}\n\n[SCORE]:\n{score}\n\n")
+            qprint(f"{i+1}/{batchsize}\n\n[IMPROVEMENT]:\n{improv} \n\n[PROMPT]:\n{prompt} \n\n[RESPONSE]:\n{response}\n\n[SCORE]:\n{score}\n\n")
 
         # WandB log values
         if args.wandb:
@@ -70,15 +77,18 @@ async def pair(args):
 
         # Early stopping criterion
         if any([score == 10 for score in judge_scores]):
-            print("Found a jailbreak. Exiting.")
+            qprint("Found a jailbreak. Exiting.")
             output = 10
             break
 
-    if str(args.logger) == "DotDict()":
-        if args.wandb:
-            logger.finish(args.index, args.goal)
+        # logger.logger.log()
 
-    return output
+    q2jb = None
+    if logger:
+        if args.wandb:
+            q2jb = logger.inner_finish(args.index, args.goal)
+            
+    return output, q2jb
 
 
 if __name__ == '__main__':
