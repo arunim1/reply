@@ -44,7 +44,7 @@ if __name__ == "__main__":
     # fpath = "/Users/arunim/Documents/github/reply/JailbreakingLLMs/wandb/latest-run"
     baseline_pair_full_path = "/Users/arunim/Documents/github/reply/JailbreakingLLMs/wandb/run-20241025_222841-pm3y0vic"
     reply_pair_full_path = "/Users/arunim/Documents/github/reply/JailbreakingLLMs/wandb/run-20241029_222932-lukeuhyc"
-    print("Baseline Pair Full")
+    print("Baseline PAIR Full")
     main(baseline_pair_full_path)
-    print("Reply Pair Full")
+    print("Reply PAIR Full")
     main(reply_pair_full_path)
