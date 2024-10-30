@@ -11,6 +11,7 @@ async def main():
 
     args.wandb = True
     args.quiet = True
+    args.reply = True
     # const args 
     args.attack_model = "gpt-4o"
     args.target_model = "claude-3-haiku-20240307"
@@ -27,7 +28,7 @@ async def main():
     args.n_iterations = 3  # max depth of search
 
     if args.wandb:
-        args.logger = WandBLogger(args, project_name = "baseline-pair-full", entity = "arunim_a", name = f"{args.attack_model}-vs-{args.target_model}")
+        args.logger = WandBLogger(args, project_name = "reply-pair-full", entity = "arunim_a", name = f"{args.attack_model}-vs-{args.target_model}-v1") if args.reply else WandBLogger(args, project_name = "baseline-pair-full", entity = "arunim_a", name = f"{args.attack_model}-vs-{args.target_model}")
 
     data = pd.read_csv("data/harmful_behaviors_custom.csv")
 
@@ -46,8 +47,8 @@ async def main():
     # await asyncio.gather(*tasks)
     print(f"<main.py_output>{full_out}</main.py_output>")
 
-    args.logger.logger.finish()
-
+    if args.wandb:
+        args.logger.logger.finish()
 
 
 if __name__ == "__main__":

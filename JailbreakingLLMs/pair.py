@@ -18,7 +18,8 @@ async def pair(args):
     # Initialize models and logger 
     system_prompt = get_attacker_system_prompt(
         args.goal,
-        args.target_str
+        args.target_str,
+        args.reply
     )
     attackLM, targetLM = load_attack_and_target_models(args)
 
@@ -34,7 +35,7 @@ async def pair(args):
     output = 0
     # Initialize conversations
     batchsize = args.n_streams
-    init_msg = get_init_msg(args.goal, args.target_str)
+    init_msg = get_init_msg(args.goal, args.target_str, args.reply)
     processed_response_list = [init_msg for _ in range(batchsize)]
     convs_list = [conv_template(attackLM.template) for _ in range(batchsize)]
 
@@ -45,18 +46,24 @@ async def pair(args):
     for iteration in range(1, args.n_iterations + 1):
         qprint(f"""\n{'='*36}\nIteration: {iteration}\n{'='*36}\n""")
         if iteration > 1:
-            processed_response_list = [process_target_response(target_response, score, args.goal, args.target_str) for target_response, score in zip(target_response_list,judge_scores)]
+            processed_response_list = [process_target_response(target_response, score, args.goal, args.target_str, args.reply) for target_response, score in zip(target_response_list,judge_scores)]
 
         # Get adversarial prompts and improvement
-        extracted_attack_list = await attackLM.get_attack(convs_list, processed_response_list)
+        extracted_attack_list = await attackLM.get_attack(convs_list, processed_response_list, args.reply)
         qprint("Finished getting adversarial prompts.")
 
         # Extract prompts and improvements
+        if args.reply:
+            adv_pre_prompt_list = [attack["pre_prompt"] for attack in extracted_attack_list]
+            adv_pre_response_list = [attack["pre_response"] for attack in extracted_attack_list]
+        else:
+            adv_pre_prompt_list = None
+            adv_pre_response_list = None
         adv_prompt_list = [attack["prompt"] for attack in extracted_attack_list]
         improv_list = [attack["improvement"] for attack in extracted_attack_list]
                 
         # Get target responses
-        target_response_list = await targetLM.get_response(adv_prompt_list)
+        target_response_list = await targetLM.get_response(adv_prompt_list, adv_pre_prompt_list, adv_pre_response_list)
         qprint("Finished getting target responses.")
 
         # Get judge scores
@@ -64,8 +71,12 @@ async def pair(args):
         qprint("Finished getting judge scores.")
         
         # Print prompts, responses, and scores
-        for i,(prompt,improv,response, score) in enumerate(zip(adv_prompt_list,improv_list,target_response_list, judge_scores)):
-            qprint(f"{i+1}/{batchsize}\n\n[IMPROVEMENT]:\n{improv} \n\n[PROMPT]:\n{prompt} \n\n[RESPONSE]:\n{response}\n\n[SCORE]:\n{score}\n\n")
+        if args.reply:
+            for i,(prompt,improv,response, score, pre_prompt, pre_response) in enumerate(zip(adv_prompt_list,improv_list,target_response_list, judge_scores, adv_pre_prompt_list, adv_pre_response_list)):
+                qprint(f"{i+1}/{batchsize}\n\n[IMPROVEMENT]:\n{improv} \n\n[PRE-PROMPT]:\n{pre_prompt}\n\n[PRE-RESPONSE]:\n{pre_response}\n\n[PROMPT]:\n{prompt} \n\n[RESPONSE]:\n{response}\n\n[SCORE]:\n{score}\n\n") 
+        else:
+            for i,(prompt,improv,response, score) in enumerate(zip(adv_prompt_list,improv_list,target_response_list, judge_scores)):
+                qprint(f"{i+1}/{batchsize}\n\n[IMPROVEMENT]:\n{improv} \n\n[PROMPT]:\n{prompt} \n\n[RESPONSE]:\n{response}\n\n[SCORE]:\n{score}\n\n") 
 
         # WandB log values
         if args.wandb:
@@ -73,7 +84,7 @@ async def pair(args):
 
         # Truncate conversation to avoid context length issues
         for i, conv in enumerate(convs_list):
-            conv.messages = conv.messages[-2*(args.keep_last_n):]
+            conv.messages = conv.messages[-2*(args.keep_last_n):] 
 
         # Early stopping criterion
         if any([score == 10 for score in judge_scores]):

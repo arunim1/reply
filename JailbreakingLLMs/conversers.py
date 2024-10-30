@@ -48,7 +48,7 @@ class AttackLM():
         if "vicuna" in model_name or "llama" in model_name:
             self.model.extend_eos_tokens()
 
-    async def get_attack(self, convs_list, prompts_list):
+    async def get_attack(self, convs_list, prompts_list, reply=False):
         """
         Generates responses for a batch of conversations and prompts using a language model. 
         Only valid outputs in proper JSON format are returned. If an output isn't generated 
@@ -70,7 +70,7 @@ class AttackLM():
 
         # Initalize the attack model's generated output to match format
         if len(convs_list[0].messages) == 0:
-            init_message = """{\"improvement\": \"\",\"prompt\": \""""
+            init_message = """{\"improvement\": \"\",\"pre_prompt\": \"""" if reply else """{\"improvement\": \"\",\"prompt\": \""""
         else:
             init_message = """{\"improvement\": \"""" 
 
@@ -105,7 +105,7 @@ class AttackLM():
                 if "gpt" not in self.model_name and "o1" not in self.model_name and "claude" not in self.model_name:
                     full_output = init_message + full_output
 
-                attack_dict, json_str = common.extract_json(full_output)
+                attack_dict, json_str = common.extract_json(full_output, reply=reply)
                 
                 if attack_dict is not None:
                     valid_outputs[orig_index] = attack_dict
@@ -147,11 +147,19 @@ class TargetLM():
             self.model = preloaded_model
             _, self.template = get_model_path_and_template(model_name)
 
-    async def get_response(self, prompts_list):
+    async def get_response(self, prompts_list, pre_prompt_list = None, pre_response_list = None):
         batchsize = len(prompts_list)
         convs_list = [common.conv_template(self.template) for _ in range(batchsize)]
+        if pre_prompt_list is None:
+            pre_prompt_list = [None] * batchsize
+        if pre_response_list is None:
+            pre_response_list = [None] * batchsize
         full_prompts = []
-        for conv, prompt in zip(convs_list, prompts_list):
+        for conv, prompt, pre_prompt, pre_response in zip(convs_list, prompts_list, pre_prompt_list, pre_response_list):
+            if pre_prompt is not None:
+                conv.append_message(conv.roles[0], pre_prompt)
+            if pre_response is not None:
+                conv.append_message(conv.roles[1], pre_response)
             conv.append_message(conv.roles[0], prompt)
             if "gpt" in self.model_name or "o1" in self.model_name:
                 # Openai does not have separators
