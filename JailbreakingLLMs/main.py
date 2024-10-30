@@ -6,16 +6,21 @@ import wandb
 import copy
 from loggers import WandBLogger
 
+from parse_log import do_prints
+
 async def main():
     args = dotdict()
 
-    args.wandb = True
-    args.quiet = True
-    args.reply = True
+    TESTING = True
+
     # const args 
-    args.attack_model = "gpt-4o"
-    args.target_model = "claude-3-haiku-20240307"
-    args.judge_model = "gpt-4o"
+    args.attack_model = "gpt-4o-mini" if TESTING else "gpt-4o"
+    args.target_model = "claude-3-haiku-20240307" if TESTING else "claude-3-haiku-20240307"
+    args.judge_model = "gpt-4o-mini" if TESTING else "gpt-4o"
+
+    args.wandb = True
+    args.quiet = not TESTING
+    args.reply = False
 
     args.attack_max_n_tokens = 1000
     args.max_n_attack_attempts = 5
@@ -23,16 +28,20 @@ async def main():
     args.judge_max_n_tokens = 100
     args.judge_temperature = 0
 
-    args.n_streams = 20  # number of parallel threads
+    args.n_streams = 2 if TESTING else 20  # number of parallel threads
     args.keep_last_n = 3
     args.n_iterations = 3  # max depth of search
 
     if args.wandb:
-        args.logger = WandBLogger(args, project_name = "reply-pair-full", entity = "arunim_a", name = f"{args.attack_model}-vs-{args.target_model}-v1") if args.reply else WandBLogger(args, project_name = "baseline-pair-full", entity = "arunim_a", name = f"{args.attack_model}-vs-{args.target_model}")
-
+        proj_name = "reply-pair" if args.reply else "baseline-pair"
+        if not TESTING: proj_name += "-full" 
+        name = None if TESTING else f"{args.attack_model}-vs-{args.target_model}"
+        args.logger = WandBLogger(args, project_name = proj_name, entity = "arunim_a", name = name)
     data = pd.read_csv("data/harmful_behaviors_custom.csv")
 
-    tasks = []
+    if TESTING: data = data.head(3)
+
+    # tasks = []
     full_out = []
     # var args
     for i, row in data.iterrows():
@@ -44,8 +53,10 @@ async def main():
         out, q2jb = await pair(args)
         full_out.append((args.index, out, q2jb))
     #     tasks.append(pair(args))
-    # await asyncio.gather(*tasks)
+    # full_out = await asyncio.gather(*tasks)
     print(f"<main.py_output>{full_out}</main.py_output>")
+
+    do_prints(full_out, args)
 
     if args.wandb:
         args.logger.logger.finish()

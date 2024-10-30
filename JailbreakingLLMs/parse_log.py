@@ -1,4 +1,26 @@
 import re
+from dotdict import DotDict as dotdict
+
+def do_prints(full_out, args = None):
+    if args is None:
+        args = dotdict()
+        args.n_streams = 20
+        args.n_iterations = 3
+
+    # count how many of these have max_score number of queries = None
+    num_failed = sum(1 for og_index, max_score, num_queries in full_out if num_queries is None)
+    print(f"Number of failed jailbreak attempts: {num_failed} / {len(full_out)}")
+
+    # assert that all of these have max_score = 0
+    assert all(max_score == 0 for og_index, max_score, num_queries in full_out if num_queries is None), "Expected all failed jailbreak attempts to have max_score = 0"
+
+    # average the number of queries over the non-failed attempts
+    avg_queries = sum(num_queries for og_index, max_score, num_queries in full_out if num_queries is not None) / (len(full_out) - num_failed)
+    print(f"Average number of queries needed to jailbreak over non-failed attempts: {avg_queries:.2f}")
+
+    # average the number of queries over all attempts, replacing failed attempts with args.n_streams * args.n_iterations
+    avg_queries = (sum(num_queries for og_index, max_score, num_queries in full_out if num_queries is not None) + num_failed * args.n_streams * args.n_iterations) / len(full_out)
+    print(f"Average number of queries needed to jailbreak over all attempts: {avg_queries:.2f}")
 
 def main(file_path):
     file_path = file_path + "/files/output.log"
@@ -15,19 +37,14 @@ def main(file_path):
         # parse the string into a list of tuples
         data = eval(text)
 
-        # count how many of these have max_score number of queries = None
-        num_failed = sum(1 for og_index, max_score, num_queries in data if num_queries is None)
-        print(f"Number of failed jailbreak attempts: {num_failed} / {len(data)}")
-
-        # assert that all of these have max_score = 0
-        assert all(max_score == 0 for og_index, max_score, num_queries in data if num_queries is None), "Expected all failed jailbreak attempts to have max_score = 0"
-
-        # average the number of queries over the non-failed attempts
-        avg_queries = sum(num_queries for og_index, max_score, num_queries in data if num_queries is not None) / (len(data) - num_failed)
-        print(f"Average number of queries needed to jailbreak over non-failed attempts: {avg_queries}")
+        do_prints(data)
 
 
 if __name__ == "__main__":
-    # example input: /Users/arunim/Documents/github/reply/JailbreakingLLMs/wandb/run-20241025_222841-pm3y0vic
-    fpath = "/Users/arunim/Documents/github/reply/JailbreakingLLMs/wandb/latest-run"
-    main(fpath)
+    # fpath = "/Users/arunim/Documents/github/reply/JailbreakingLLMs/wandb/latest-run"
+    baseline_pair_full_path = "/Users/arunim/Documents/github/reply/JailbreakingLLMs/wandb/run-20241025_222841-pm3y0vic"
+    reply_pair_full_path = "/Users/arunim/Documents/github/reply/JailbreakingLLMs/wandb/run-20241029_222932-lukeuhyc"
+    print("Baseline Pair Full")
+    main(baseline_pair_full_path)
+    print("Reply Pair Full")
+    main(reply_pair_full_path)
