@@ -11,16 +11,16 @@ from parse_log import do_prints
 async def main():
     args = dotdict()
 
-    TESTING = True
+    TESTING = False 
 
     # const args 
     args.attack_model = "gpt-4o-mini" if TESTING else "gpt-4o"
-    args.target_model = "claude-3-haiku-20240307" if TESTING else "claude-3-haiku-20240307"
+    args.target_model = "claude-3-haiku-20240307" if TESTING else "claude-3-sonnet-20240229"
     args.judge_model = "gpt-4o-mini" if TESTING else "gpt-4o"
 
     args.wandb = True
     args.quiet = not TESTING
-    args.reply = False
+    args.reply = True
 
     args.attack_max_n_tokens = 1000
     args.max_n_attack_attempts = 5
@@ -64,3 +64,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+    #TODO: parse args instead of hardcoding
