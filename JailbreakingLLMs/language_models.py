@@ -16,8 +16,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-OPENAI_CONCURRENCY = 10
-ANTHROPIC_CONCURRENCY = 10
+OPENAI_CONCURRENCY = 20
+ANTHROPIC_CONCURRENCY = 20
 
 class LanguageModel():
     def __init__(self, model_name):
