@@ -13,3 +13,8 @@ attr-dot-dict
 
 transformers
 google-generativeai
+
+
+
+nanogcg 
+huggingface_hub
