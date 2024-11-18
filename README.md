@@ -34,5 +34,6 @@ This version of PAIR is also updated to a) work asynchronously and b) use update
 
 
 TODO: 
+- replot the number of queries to jailbreak (becomes x-axis) using bins and plotting the distribution for each method (non-reply vs. reply and sonnet vs. haiku), and y-axis is the count of how many prompts were in that bin
 - nanoGCG initial run / eval
 - nanoGCG proof of concept and testing
