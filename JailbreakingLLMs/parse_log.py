@@ -114,6 +114,73 @@ def graph_data(data_list):
     plt.tight_layout()
     plt.show()
 
+
+def graph_data_2(data_list):
+    # Set up colors and transparencies
+    colors = {'Baseline': 'blue', 'Reply': 'red'}
+    alphas = {'Baseline': 0.5, 'Reply': 0.5}
+    # hatches = {'Baseline': '//', 'Reply': '\\\\'}
+    hatches = {'Baseline': 'xx', 'Reply': 'x'}
+    
+    # Find max queries across all datasets for binning
+    max_queries = max(
+        num_queries
+        for data, _ in data_list
+        for _, _, num_queries in data
+        if num_queries is not None
+    )
+    
+    # Create bins from 0 to max_queries in steps of 5
+    bins = np.arange(0, max_queries + 5, 5)
+    
+    # Create the plot with 2 subplots side by side
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    axes = {'Haiku': ax1, 'Sonnet': ax2}
+    
+    # Find max count across all histograms for consistent y-axis
+    max_count = 0
+    hist_data = {'Haiku': {'Baseline': [], 'Reply': []}, 
+                 'Sonnet': {'Baseline': [], 'Reply': []}}
+    
+    # Organize data by model and mode
+    for data, description in data_list:
+        queries = [num_queries for _, _, num_queries in data if num_queries is not None]
+        model = 'Haiku' if 'Haiku' in description else 'Sonnet'
+        mode = 'Baseline' if 'Baseline' in description else 'Reply'
+        hist_data[model][mode] = queries
+        counts, _ = np.histogram(queries, bins=bins)
+        max_count = max(max_count, max(counts))
+    
+    # Plot histograms for each model
+    for model in ['Haiku', 'Sonnet']:
+        ax = axes[model]
+        
+        # Track vertical positions for text labels
+        text_positions = {'Baseline': 0.9, 'Reply': 0.8}
+        
+        for mode in ['Baseline', 'Reply']:
+            queries = hist_data[model][mode]
+            ax.hist(queries, bins=bins, alpha=alphas[mode], color=colors[mode],
+                   edgecolor='black', histtype='bar', rwidth=0.8,
+                   label=f'{mode}', hatch=hatches[mode])
+            
+            # Calculate and plot average as vertical line
+            avg = np.mean(queries)
+            ax.axvline(x=avg, color=colors[mode], alpha=alphas[mode], 
+                      linestyle='--', linewidth=2)
+            # Annotate the average line at different heights
+            ax.text(avg + 1, max_count * text_positions[mode], f'{mode} Avg: {avg:.2f}',
+                   color="black", fontsize=9, rotation=0)
+        
+        ax.set_ylim(0, max_count + 1)
+        ax.set_xlabel("Number of Queries to Jailbreak")
+        ax.set_ylabel("Count")
+        ax.set_title(f"{model} Model")
+        ax.legend()
+    
+    plt.tight_layout()
+    plt.show()
+
 def main(file_paths, descriptions):
     data_list = []
     for file_path, description in zip(file_paths, descriptions):
@@ -136,7 +203,7 @@ def main(file_paths, descriptions):
             do_prints(data)
             data_list.append((data, description))
 
-    graph_data(data_list)
+    graph_data_2(data_list)
 
 
 if __name__ == "__main__":

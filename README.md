@@ -27,13 +27,12 @@ Average number of queries needed to jailbreak over all attempts*: 32.94 (11.2% f
 *Note: substituting the maximum queries made (60, in this run) where no jailbreak was found. 
 
 
-![Number of Queries to Jailbreak](JailbreakingLLMs/images/nq2j.png)
+![Number of Queries to Jailbreak](JailbreakingLLMs/images/nq2j2.png)
 
 
 This version of PAIR is also updated to a) work asynchronously and b) use updated API formats and c) with an outer loop to run the full eval. 
 
 
 TODO: 
-- replot the number of queries to jailbreak (becomes x-axis) using bins and plotting the distribution for each method (non-reply vs. reply and sonnet vs. haiku), and y-axis is the count of how many prompts were in that bin
 - nanoGCG initial run / eval
 - nanoGCG proof of concept and testing
